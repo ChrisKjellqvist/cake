@@ -7,6 +7,19 @@ type overlap_t =  NO_OVERLAP
   | EDGE_LEFTA | EDGE_RIGHTA
   | OVERLAP_BOTH;;
 
+let string_from_overlap q = match q with
+  | NO_OVERLAP -> "NO_OVERLAP"
+  | OVERLAP_LEFTA -> "OVERLAP_LEFTA"
+  | OVERLAP_LEFTA_EDGE_RIGHTA -> "OVERLAP_LEFTA_EDGE_RIGHTA"
+  | A_CONTAINS_B -> "A_CONTAINS_B"
+  | B_CONTAINS_A -> "B_CONTAINS_A"
+  | OVERLAP_RIGHTA -> "OVERLAP_RIGHTA"
+  | EDGE_LEFTA_OVERLAP_RIGHTA -> "EDGE_LEFTA_OVERLAP_RIGHTA"
+  | EQUALS -> "EQUALS"
+  | EDGE_LEFTA -> "EDGE_LEFTA"
+  | EDGE_RIGHTA -> "EDGE_RIGHTA"
+  | OVERLAP_BOTH -> "OVERLAP_BOTH"
+
 type arcPoint = int * int;;
 
 let arcPlus a b = (fst a + fst b, snd a + snd b)
@@ -34,7 +47,7 @@ let rec normalize q =
 
 let eval_pos (a, b) = float_of_int a +. float_of_int b *. sc;;
 
-let compare arcA arcB =
+let cake_compare arcA arcB =
   let arcA_p1 = normalize(eval_pos(arcA.start))
   and arcA_p2 = normalize(eval_pos(arcA.fin))
   and arcB_p1 = normalize(eval_pos(arcB.start))
@@ -216,7 +229,7 @@ let simplifyAllSlices allSlices =
           in simplifySlicesHelp allSlices [] ;;
 
 let flipSliceAlongArc flipArc sliceArc =
-  match compare sliceArc flipArc with
+  match cake_compare sliceArc flipArc with
      | NO_OVERLAP -> [sliceArc]
      | OVERLAP_LEFTA ->
          let insideOverlap = { start = flipArc.start;
@@ -258,3 +271,16 @@ let flipSliceAlongArc flipArc sliceArc =
            ; fin = arcPlus flipArc.start l_aLeft
            ; up = not sliceArc.up } ];;
 
+(* let's try some simple test examples to make sure this doesn't explode *)
+let sliceA = {
+  start = (0, 0);
+  fin = (15, 0);
+  up = true };;
+let flipSlice = {
+  start = (5, 0);
+  fin = (20, 0);
+  up = true };;
+
+print_float total_degrees;; 
+print_newline();;
+print_string (string_from_overlap ( cake_compare sliceA flipSlice ));;
