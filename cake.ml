@@ -49,26 +49,26 @@ let compare arcA arcB =
         if arcA_p2 < arcB_p2 then EDGE_LEFTA_OVERLAP_RIGHTA
           (* aaa
              bbbb *)
-  else if eq arcA.fin arcB.fin then EQUALS
+        else if eq arcA.fin arcB.fin then EQUALS
           (* aaa
              bbb *)
         else if arcA_p2 > arcB_p2 then EDGE_LEFTA
           (* aaa
              bb *)
-  else failwith "Uncaught case 0"
+        else failwith "Uncaught case 0"
       ) else if arcA_p1 < arcB_p1 then (
         (* aaa
             xxxx *)
         if eq arcA.fin arcB.fin then EDGE_RIGHTA
           (* aaa
               bb *)
-      else if arcA_p2 < arcB_p1 then NO_OVERLAP
+        else if arcA_p2 < arcB_p1 then NO_OVERLAP
           (* aaa
                 b *)
         else if arcB_p2 < arcA_p2 then A_CONTAINS_B
           (* aaa
               b *)
-      else if arcB_p2 > arcA_p2 && arcB_p1 < arcA_p2 then OVERLAP_RIGHTA
+        else if arcB_p2 > arcA_p2 && arcB_p1 < arcA_p2 then OVERLAP_RIGHTA
           (* aaa
                bb *)
         else failwith "Uncaught case 1"
@@ -78,115 +78,117 @@ let compare arcA arcB =
         if arcB_p2 < arcA_p1 || eq arcB.fin arcA.start then NO_OVERLAP
           (*  aaa
              b *)
-      else if eq arcA.fin arcB.fin then OVERLAP_LEFTA_EDGE_RIGHTA
+        else if eq arcA.fin arcB.fin then OVERLAP_LEFTA_EDGE_RIGHTA
           (*  aaa
              bbbb *)
         else if arcA_p2 < arcB_p2 then B_CONTAINS_A
           (*  aaa
-               b *)
-      else if arcB_p2 > arcA_p1 && arcB_p2 < arcA_p2 then OVERLAP_LEFTA
+            bbbbbb *)
+        else if arcB_p2 > arcA_p1 && arcB_p2 < arcA_p2 then OVERLAP_LEFTA
+          (*  aaa
+             bbb *)
         else failwith "Unncaught case 2"
       )
-      ) else ( (* yes boundary cross of arcB across 0, but not arcA *)
-        (* bb|bb
-          xxx xxx... *)
-        if eq arcA.start arcB.start then EDGE_LEFTA_OVERLAP_RIGHTA
+    ) else ( (* yes boundary cross of arcB across 0, but not arcA *)
+      (* bb|bb
+        xxx xxx... *)
+      if eq arcA.start arcB.start then EDGE_LEFTA_OVERLAP_RIGHTA
         (*bb|bb
           aa *)
-    else if arcA_p1 > arcB_p2 || eq arcA.start arcB.fin then (
-      (*bb|bb
-       xxx   a..*)
-      if arcA_p2 < arcB_p1 || eq arcA.fin arcB.start then NO_OVERLAP
+      else if arcA_p1 > arcB_p2 || eq arcA.start arcB.fin then (
+          (*bb|bb
+           xxx   a..*)
+        if arcA_p2 < arcB_p1 || eq arcA.fin arcB.start then NO_OVERLAP
           (* bb|bb
             a     a.. *)
         else if arcA_p2 > arcB_p1 then OVERLAP_RIGHTA
-      else failwith "Uncaught case 4"
-    ) else if arcA_p1 < arcB_p2 then (
-      (* bb|bb
-          xx   a...*)
-      if arcA_p2 < arcB_p1 || eq arcA.fin arcB.start then OVERLAP_LEFTA
+        else failwith "Uncaught case 4"
+      ) else if arcA_p1 < arcB_p2 then (
+        (* bb|bb
+            xx   a...*)
+        if arcA_p2 < arcB_p1 || eq arcA.fin arcB.start then OVERLAP_LEFTA
           (* bb|bb
             a    aa*)
-    else if arcB_p1 < arcA_p2 then OVERLAP_BOTH
+        else if arcB_p1 < arcA_p2 then OVERLAP_BOTH
           (* bb|bb
             aaa  aa... *)
-      else failwith "Uncaught case 5"
-    ) else failwith "Uncaught case 3"
+        else failwith "Uncaught case 5"
+      ) else failwith "Uncaught case 3"
     )
-      ) else ( (* arcA overlaps 0 boundary*)
-        if arcB_p1 < arcB_p2 then ( (* arcB does not overlap 0 boundary *)
-          (* aa|aa
+  ) else ( (* arcA overlaps 0 boundary*)
+    if arcB_p1 < arcB_p2 then ( (* arcB does not overlap 0 boundary *)
+      (* aa|aa
         xx   xx *)
-          if arcB_p1 < arcA_p2 then (
-            (* aa|aa
-          xx  bbx *)
-            if eq arcB.fin arcA.fin then EDGE_RIGHTA
+      if arcB_p1 < arcA_p2 then (
+          (* aa|aa
+            xx  bbx *)
+        if eq arcB.fin arcA.fin then EDGE_RIGHTA
           (* aa|aa
                 bb *)
-  else if arcB_p2 < arcA_p2 then A_CONTAINS_B
+        else if arcB_p2 < arcA_p2 then A_CONTAINS_B
           (* aa|aa
                 b *)
-            else if arcB_p2 < arcA_p2 || eq arcB.fin arcA.start then OVERLAP_RIGHTA
+        else if arcB_p2 < arcA_p2 || eq arcB.fin arcA.start then OVERLAP_RIGHTA
           (* aa|aa
             b   bbb..*)
-  else if arcB_p2 > arcA_p1 then OVERLAP_BOTH
-            else failwith "Uncaught case 8"
-          ) else if arcB_p1 > arcA_p2 || eq arcA.fin arcB.start then (
-            (* aa|aa
+        else if arcB_p2 > arcA_p1 then OVERLAP_BOTH
+        else failwith "Uncaught case 8"
+      ) else if arcB_p1 > arcA_p2 || eq arcA.fin arcB.start then (
+        (* aa|aa
           xx    b.. *)
-            if arcB_p2 < arcA_p1 || eq arcB.fin arcA.start then NO_OVERLAP
+        if arcB_p2 < arcA_p1 || eq arcB.fin arcA.start then NO_OVERLAP
           (* aa|aa
             b     b..*)
-          else if arcA_p1 < arcB_p2 then OVERLAP_LEFTA
-            else failwith "Uncaught case 9"
-          ) else if eq arcA.start arcB.start then EDGE_LEFTA
+        else if arcA_p1 < arcB_p2 then OVERLAP_LEFTA
+        else failwith "Uncaught case 9"
+      ) else if eq arcA.start arcB.start then EDGE_LEFTA
         (* aa|aa
           eb *)
-          else if arcB_p1 > arcA_p1 then A_CONTAINS_B
-          else failwith "Uncaught case 7"
-        ) else ( (* both arcA & arcB overlap 0 boundary *)
-          (* aaa|aaa
+      else if arcB_p1 > arcA_p1 then A_CONTAINS_B
+      else failwith "Uncaught case 7"
+    ) else ( (* both arcA & arcB overlap 0 boundary *)
+      (* aaa|aaa
         xxxx|xxxx *)
-          if eq arcA.start arcB.start then (
-            (* aaa|aaa
+      if eq arcA.start arcB.start then (
+        (* aaa|aaa
            bbb|bxxx *)
-            if eq arcB.fin arcA.fin then EQUALS
+        if eq arcB.fin arcA.fin then EQUALS
           (* aaa|aaa
              bbb|bbb *)
         else if arcB_p2 < arcA_p2 then EDGE_LEFTA
           (* aaa|aaa
              bbb|b *)
-            else if arcB_p2 > arcA_p2 then EDGE_LEFTA_OVERLAP_RIGHTA
+        else if arcB_p2 > arcA_p2 then EDGE_LEFTA_OVERLAP_RIGHTA
           (* aaa|aaa
              bbb|bbbb *)
         else failwith "Uncaught case 11"
-          ) else if arcB_p1 > arcA_p1 then (
-            (* aaa|aaa
+      ) else if arcB_p1 > arcA_p1 then (
+        (* aaa|aaa
             bb|bbxxx *)
-            if eq arcA.fin arcB.fin then EDGE_RIGHTA
+        if eq arcA.fin arcB.fin then EDGE_RIGHTA
           (* aaa|aaa
                b|bbb *)
-          else if arcB_p2 < arcA_p2 then A_CONTAINS_B
+        else if arcB_p2 < arcA_p2 then A_CONTAINS_B
           (* aaa|aaa
                b|b    *)
-            else if arcB_p2 > arcA_p2 then OVERLAP_RIGHTA
-          else failwith "Uncaught case 12"
-          ) else if arcB_p1 < arcA_p1 then (
-            (* aaa|aaa
+        else if arcB_p2 > arcA_p2 then OVERLAP_RIGHTA
+        else failwith "Uncaught case 12"
+      ) else if arcB_p1 < arcA_p1 then (
+        (* aaa|aaa
           bbbb|bbxxx *)
-            if eq arcA.fin arcB.fin then OVERLAP_LEFTA_EDGE_RIGHTA
+        if eq arcA.fin arcB.fin then OVERLAP_LEFTA_EDGE_RIGHTA
           (* aaa|aaa
             bbbb|bbb *)
-          else if arcB_p2 < arcA_p2 then OVERLAP_LEFTA
+        else if arcB_p2 < arcA_p2 then OVERLAP_LEFTA
           (* aaa|aaa
             bbbb|bb *)
-            else if arcB_p2 > arcA_p2 then B_CONTAINS_A
+        else if arcB_p2 > arcA_p2 then B_CONTAINS_A
           (* aaa|aaa
             bbbb|bbbb *)
-          else failwith "Unncaught case 13"
-          ) else failwith "Uncaught case 10"
-          )
-        );;
+        else failwith "Unncaught case 13"
+      ) else failwith "Uncaught case 10"
+    )
+  );;
 
 let areArcsAdjacent arcA arcB = arcA.up == arcB.up && (eq arcA.start arcB.fin || eq arcA.fin arcB.start) ;;
 
@@ -234,12 +236,25 @@ let flipSliceAlongArc flipArc sliceArc =
          and rightDist = arcMinus sliceArc.fin flipArc.start
          in [{ start = arcMinus flipArc.fin rightDist; fin = arcMinus flipArc.fin leftDist; up = not sliceArc.up} ]
      | OVERLAP_RIGHTA -> (* only flip the a part!!! *)
-         failwith ""
-     | EDGE_LEFTA -> failwith ""
-     | EDGE_LEFTA_OVERLAP_RIGHTA -> failwith ""
-     | EQUALS -> failwith ""
-     | EDGE_RIGHTA -> failwith ""
-     | OVERLAP_BOTH -> failwith "" ;;
+         let l = arcMinus sliceArc.fin flipArc.start
+         in [ { sliceArc with fin = flipArc.start }; { start = arcMinus flipArc.fin l ; fin = flipArc.fin; up = not sliceArc.up } ]
+     | EDGE_LEFTA -> [ { sliceArc with start = flipArc.fin }; {flipArc with up = not sliceArc.up } ]
+     | EDGE_LEFTA_OVERLAP_RIGHTA ->
+         let l = arcMinus sliceArc.fin sliceArc.start
+         in [{ start = arcMinus flipArc.fin l; fin = flipArc.fin; up = not sliceArc.up }] 
+     | EQUALS -> [ {sliceArc with up = not sliceArc.up } ]
+     | EDGE_RIGHTA -> [ {sliceArc with fin = flipArc.start }; {flipArc with up = not sliceArc.up } ]
+     | OVERLAP_BOTH ->
+         let l_aLeft = arcMinus flipArc.fin sliceArc.start
+         and l_aRight = arcMinus flipArc.start sliceArc.fin
+         in [
+           { start = flipArc.fin
+           ; fin = flipArc.start
+           ; up = sliceArc.up };
+           { start = arcMinus flipArc.fin l_aRight
+           ; fin = flipArc.fin
+           ; up = not sliceArc.up };
+           { start = flipArc.start
+           ; fin = arcPlus flipArc.start l_aLeft
+           ; up = not sliceArc.up } ];;
 
-
-print_string "Hello World";;
