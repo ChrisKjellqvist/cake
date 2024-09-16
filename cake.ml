@@ -1,6 +1,8 @@
 type overlap_t =  NO_OVERLAP
-  | OVERLAP_LEFTA | OVERLAP_LEFTA_EDGE_RIGHTA
-  | A_CONTAINS_B | B_CONTAINS_A
+  | OVERLAP_LEFTA 
+  | OVERLAP_LEFTA_EDGE_RIGHTA
+  | A_CONTAINS_B 
+  | B_CONTAINS_A
   | OVERLAP_RIGHTA
   | EDGE_LEFTA_OVERLAP_RIGHTA
   | EQUALS
@@ -20,6 +22,11 @@ let string_from_overlap q = match q with
   | EDGE_RIGHTA -> "EDGE_RIGHTA"
   | OVERLAP_BOTH -> "OVERLAP_BOTH"
 
+type is_finished_t =
+  | DONE
+  | REVERSED
+  | NOT_DONE;; 
+
 type arcPoint = int * int;;
 
 let arcPlus a b = (fst a + fst b, snd a + snd b)
@@ -29,6 +36,8 @@ type arc_t = {
   start : arcPoint;
   fin : arcPoint;
   up : bool;
+
+
 };;
 
 let eq a b = ((fst a) == (fst b)) && ((snd a) == (snd b));;
@@ -43,17 +52,24 @@ let do_problem a b c mode =
   and total_degrees = float_of_int (a * b * c)
   and total_degrees_i = a * b * c
   in let eval_pos (a, b) = 
-    let rec normalize q =
-      if q < 0. then normalize(q +.total_degrees)
-      else if q > total_degrees then normalize (q -. total_degrees)
+    let normalize q =
+      if q < 0. then q +. Float.abs(Float.floor(q /. total_degrees)) *. total_degrees
+      else if q > total_degrees then q -. Float.floor(q /. total_degrees) *. total_degrees 
       else q
-    in normalize(float_of_int a +. float_of_int b *. sc)
+    in
+      let r = normalize(float_of_int a +. float_of_int b *. sc) in
+      if r < 0. then failwith (String.concat " " [string_of_float r; string_of_float (float_of_int a +. float_of_int b *. sc)])
+      else r
   in let rec print_arcs lst = match lst with
     | a :: rst -> 
         let () = Printf.printf "%d: [ %0.2f(%d, %d), %0.2f(%d, %d) ] %s\n" (List.length rst) (eval_pos(a.start)) (fst a.start) (snd a.start) (eval_pos(a.fin)) (fst a.fin) (snd a.fin) (if a.up then "up" else "down")
         in print_arcs rst
     | [] -> ()
   and verbose = false
+  (*in let comp_p a b =
+    let apos = eval_pos a.start
+    and bpos = eval_pos b.start
+    in if apos > bpos then 1 else if apos == bpos then 0 else -1*)
   in let cake_compare arcA arcB =
     let arcA_p1 = eval_pos(arcA.start)
     and arcA_p2 = eval_pos(arcA.fin)
@@ -244,19 +260,23 @@ let do_problem a b c mode =
   in let mergeAdjacentArcs arcA arcB =
     if eq arcA.start arcB.fin then { arcB with fin = arcA.fin }
     else { arcA with fin = arcB.fin }
-  in let rec simplifySliceAgainst mSlice slicesToConsider unfitSlices success =
-    (* given a slice out, try to combine it with all the others. If it goes, then great: put it in
-  the "combined list". If it doesn't then put it in the "uncombined list" *)
-    match slicesToConsider with
-      | headSlice :: rst -> if areArcsAdjacent headSlice mSlice  then simplifySliceAgainst (mergeAdjacentArcs headSlice mSlice) rst unfitSlices true
-    else simplifySliceAgainst mSlice rst (headSlice :: unfitSlices) success
-      | [] -> (mSlice, unfitSlices, success)
 
   (* tie all the adecent slices together *)
   in let rec normPoint pt =
     if (fst pt) < 0 then normPoint (fst pt + total_degrees_i, snd pt) 
-    else (fst pt mod total_degrees_i, snd pt)
-  in let simplifyAllSlices allSlices =
+    else (fst pt mod total_degrees_i, snd pt) in
+
+  (* simplify slices naively is O(n^2) so we write a O(NlgN) version below *)
+  (* let simplifyAllSlices allSlices =
+    let rec simplifySliceAgainst mSlice slicesToConsider unfitSlices success =
+      (* given a slice out, try to combine it with all the others. If it goes, then great: put it in
+    the "combined list". If it doesn't then put it in the "uncombined list" *)
+      match slicesToConsider with
+        | headSlice :: rst -> 
+            if areArcsAdjacent headSlice mSlice
+              then simplifySliceAgainst (mergeAdjacentArcs headSlice mSlice) rst unfitSlices true
+              else simplifySliceAgainst mSlice rst (headSlice :: unfitSlices) success
+        | [] -> (mSlice, unfitSlices, success) in
     let rec normAllArcs arcs out = 
       let normArc arc = { arc with start = normPoint arc.start; fin = normPoint arc.fin } 
       in match arcs with
@@ -270,7 +290,33 @@ let do_problem a b c mode =
       else simplifySlicesHelp rst (resSlice :: outputSlices)
         | [] -> outputSlices
     in simplifySlicesHelp (normAllArcs allSlices []) [] 
-
+*)
+  (* O(nlg n) version *)
+  let simplifyAllSlices allSlicesUnsorted =
+    let comp_slice a b = Float.compare (eval_pos a.start) (eval_pos b.start) in
+    let allSlices = List.sort comp_slice allSlicesUnsorted in 
+    let rec normAllArcs arcs out = 
+      let normArc arc = { arc with start = normPoint arc.start; fin = normPoint arc.fin } 
+      in match arcs with
+      | a :: rcs -> normAllArcs  rcs ((normArc a) :: out)
+      | [] -> out
+    in let rec simplifySlicesHelp headSlice slices outputSlices =
+      match slices with
+        | hSlice :: rst ->
+            if areArcsAdjacent headSlice hSlice
+            then simplifySlicesHelp (mergeAdjacentArcs headSlice hSlice) rst outputSlices
+            else simplifySlicesHelp hSlice rst (headSlice :: outputSlices)
+        | [] -> 
+            match List.rev outputSlices with
+            | first :: rst ->
+              if areArcsAdjacent first headSlice
+              then (mergeAdjacentArcs first headSlice) :: rst
+              else headSlice :: outputSlices
+            | [] -> [headSlice]
+    in match normAllArcs allSlices [] with
+    | fst :: rst -> simplifySlicesHelp fst rst []
+    | [] -> failwith "Somehow had an empty list in simplifyAllSlices"
+    
   in let flipSliceAlongArc flipArc sliceArc =
     let comparison = cake_compare sliceArc flipArc
     in let _ = if verbose then  print_comp_eval flipArc sliceArc comparison else () 
@@ -282,6 +328,7 @@ let do_problem a b c mode =
                                  fin = arcPlus flipArc.start (arcMinus flipArc.fin sliceArc.start);
                                  up = not sliceArc.up }
            in [insideOverlap; { sliceArc with start = flipArc.fin } ]
+           
        | OVERLAP_LEFTA_EDGE_RIGHTA ->
            let l = arcMinus sliceArc.fin sliceArc.start
            in [ {start = flipArc.start; fin = arcPlus flipArc.start l ; up = not sliceArc.up } ]
@@ -329,9 +376,9 @@ let do_problem a b c mode =
   (* function to check end condition - the whole pie should be up *)
   in let meets_end_condition slices =
     match slices with
-    | [] -> false
-    | (_ :: (_ :: rst)) -> false
-    | (a :: []) -> eq a.start a.fin
+    | [] -> failwith "empty pie"
+    | (_ :: (_ :: _)) -> NOT_DONE
+    | (a :: []) -> if a.up then DONE else REVERSED (* eq a.start a.fin*)
   in let randomArcP () = normPoint (Random.int total_degrees_i, Random.int total_degrees_i)
 
   (* random tests *)
@@ -375,12 +422,15 @@ let do_problem a b c mode =
         and _ = print_newline()
         in print_arcs res_back
   in let rec problem_loop slices f ff fff cursor steps =
-    if meets_end_condition slices then steps
-    else if steps > 100000 then
+    match meets_end_condition slices with
+    | DONE -> steps
+    | REVERSED -> let _ = print_string "." in steps * 2
+    | NOT_DONE ->
+    if steps > 1000000 then
       let _ = Printf.printf "Failing on a(%d) b(%d) c(%d)\n" a b c
        in failwith "something wrong"
     else
-      let _ = Printf.printf "Step %d has %d slices\n" steps (List.length slices)
+      let _ = if verbose then Printf.printf "Step %d has %d slices\n" steps (List.length slices) else ()
       in let cursor_slice =
         let front = cursor
         and back = normPoint (arcPlus cursor f)
@@ -403,7 +453,9 @@ let do_problem a b c mode =
         in if sqrt_int < 0 
           then problem_loop [ {start = (0, 0); fin = (b * c, 0); up = false }; {start = (b * c, 0); fin = (0, 0); up = true }] (a * c, 0) (0, a * b) (b * c, 0) (b * c, 0) 1
           else problem_loop [ {start = (0, 0); fin = (b * c, 0); up = false }; {start = (b * c, 0); fin = (0, 0); up = true }] (a * c, 0) (a * b * sqrt_int, 0) (b * c, 0) (b * c, 0) 1;;
-
+(* do a sanity check *)
+do_problem 3 4 5 TEST;;
+do_problem 3 4 5 DO_PROBLEM;;
 let do_many lim =
   let rec loopy a b c =
     if a == lim then Printf.printf "done\n"
@@ -412,5 +464,6 @@ let do_many lim =
     else let _ = Printf.printf "%d %d %d: %d\n" a b c (do_problem a b c DO_PROBLEM)
       in loopy a b (c + 1) 
   in loopy 3 4 5;;
+do_many 10;;
+(*print_int (do_problem 5 6 8 DO_PROBLEM);;*)
 
-print_int (do_problem 5 6 8 DO_PROBLEM);;
