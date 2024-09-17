@@ -26,21 +26,17 @@ type is_finished_t =
   | DONE
   | REVERSED
   | NOT_DONE;; 
-
-type arcPoint = int * int;;
-
-let arcPlus a b = (fst a + fst b, snd a + snd b)
-let arcMinus a b = (fst a - fst b, snd a - snd b)
-
+  
+type arcPoint = {
+  tup : int * int;
+  eval : float
+}
 type arc_t = {
   start : arcPoint;
   fin : arcPoint;
   up : bool;
-
-
 };;
 
-let eq a b = ((fst a) == (fst b)) && ((snd a) == (snd b));;
 
 type run_mode_t =
   | DO_PROBLEM
@@ -50,19 +46,31 @@ let do_problem a b c mode =
   let test_n = a * b * c * 10 in
   let sc = sqrt (float_of_int c)
   and total_degrees = float_of_int (a * b * c)
-  and total_degrees_i = a * b * c
-  in let eval_pos (a, b) = 
-    let normalize q =
-      if q < 0. then q +. Float.abs(Float.floor(q /. total_degrees)) *. total_degrees
-      else if q > total_degrees then q -. Float.floor(q /. total_degrees) *. total_degrees 
-      else q
-    in
-      let r = normalize(float_of_int a +. float_of_int b *. sc) in
-      if r < 0. then failwith (String.concat " " [string_of_float r; string_of_float (float_of_int a +. float_of_int b *. sc)])
-      else r
-  in let rec print_arcs lst = match lst with
+  and total_degrees_i = a * b * c in
+
+  let create_arcPoint a b =
+    let eval_pos a b = 
+      let normalize q =
+        if q < 0. then q +. Float.abs(Float.floor(q /. total_degrees)) *. total_degrees
+        else if q > total_degrees then q -. Float.floor(q /. total_degrees) *. total_degrees 
+        else q
+      in
+        let r = normalize(float_of_int a +. float_of_int b *. sc) in
+        if r < 0. then failwith (String.concat " " [string_of_float r; string_of_float (float_of_int a +. float_of_int b *. sc)])
+        else r in
+    let modNorm q =
+      if q >= total_degrees_i then q mod total_degrees_i
+      else if q < 0 then total_degrees_i + (q mod total_degrees_i)
+      else q in
+    let fixA = modNorm a in
+    { tup = (fixA, b); eval = eval_pos fixA b } in
+
+  let arcPlus a b = create_arcPoint (fst a.tup + fst b.tup) (snd a.tup + snd b.tup) in 
+  let arcMinus a b = create_arcPoint (fst a.tup - fst b.tup) (snd a.tup - snd b.tup) in 
+  let eq {tup = a; eval = _} {tup = b; eval = _} = ((fst a) == (fst b)) && ((snd a) == (snd b)) in 
+  let rec print_arcs lst = match lst with
     | a :: rst -> 
-        let () = Printf.printf "%d: [ %0.2f(%d, %d), %0.2f(%d, %d) ] %s\n" (List.length rst) (eval_pos(a.start)) (fst a.start) (snd a.start) (eval_pos(a.fin)) (fst a.fin) (snd a.fin) (if a.up then "up" else "down")
+        let () = Printf.printf "%d: [ %0.2f(%d, %d), %0.2f(%d, %d) ] %s\n" (List.length rst) (a.start.eval) (fst a.start.tup) (snd a.start.tup) (a.fin.eval) (fst a.fin.tup) (snd a.fin.tup) (if a.up then "up" else "down")
         in print_arcs rst
     | [] -> ()
   and verbose = false
@@ -71,60 +79,55 @@ let do_problem a b c mode =
     and bpos = eval_pos b.start
     in if apos > bpos then 1 else if apos == bpos then 0 else -1*)
   in let cake_compare arcA arcB =
-    let arcA_p1 = eval_pos(arcA.start)
-    and arcA_p2 = eval_pos(arcA.fin)
-    and arcB_p1 = eval_pos(arcB.start)
-    and arcB_p2 = eval_pos(arcB.fin)
-    and _ = if verbose then
+    let _ = if verbose then
       let _ = print_string "CALL TO COMPARE\n"
       and _ = print_arcs [arcA; arcB]
-      in  print_string "END CALL\n"
-    in
+      in  print_string "END CALL\n" in
     if eq arcA.start arcA.fin then A_CONTAINS_B (* the entire circle is covered by A, so necessarily A contains B *)
-    else if arcA_p1 < arcA_p2 then (* no boundary-cross 0 *) (
-      if arcB_p1 < arcB_p2 then (* no boundary-cross 0 *) (
+    else if arcA.start.eval < arcA.fin.eval then (* no boundary-cross 0 *) (
+      if arcB.start.eval < arcB.fin.eval then (* no boundary-cross 0 *) (
         if eq arcA.start arcB.start then (
           (* aaa
              bxxx *)
-          if arcA_p2 < arcB_p2 then EDGE_LEFTA_OVERLAP_RIGHTA
+          if arcA.fin.eval < arcB.fin.eval then EDGE_LEFTA_OVERLAP_RIGHTA
             (* aaa
                bbbb *)
           else if eq arcA.fin arcB.fin then EQUALS
             (* aaa
                bbb *)
-          else if arcA_p2 > arcB_p2 then EDGE_LEFTA
+          else if arcA.fin.eval > arcB.fin.eval then EDGE_LEFTA
             (* aaa
                bb *)
           else failwith "Uncaught case 0"
-        ) else if arcA_p1 < arcB_p1 then (
+        ) else if arcA.start.eval < arcB.start.eval then (
           (* aaa
               xxxx *)
           if eq arcA.fin arcB.fin then EDGE_RIGHTA
             (* aaa
                 bb *)
-          else if arcA_p2 < arcB_p1 || eq arcA.fin arcB.start then NO_OVERLAP
+          else if arcA.fin.eval < arcB.start.eval || eq arcA.fin arcB.start then NO_OVERLAP
             (* aaa
                   b *)
-          else if arcB_p2 < arcA_p2 then A_CONTAINS_B
+          else if arcB.fin.eval < arcA.fin.eval then A_CONTAINS_B
             (* aaa
                 b *)
-          else if arcB_p2 > arcA_p2 && arcB_p1 < arcA_p2 then OVERLAP_RIGHTA
+          else if arcB.fin.eval > arcA.fin.eval && arcB.start.eval < arcA.fin.eval then OVERLAP_RIGHTA
             (* aaa
                  bb *)
           else failwith "Uncaught case 1"
         ) else (
           (* aaa
             bxxxx *)
-          if arcB_p2 < arcA_p1 || eq arcB.fin arcA.start then NO_OVERLAP
+          if arcB.fin.eval < arcA.start.eval || eq arcB.fin arcA.start then NO_OVERLAP
             (*  aaa
                b *)
           else if eq arcA.fin arcB.fin then OVERLAP_LEFTA_EDGE_RIGHTA
             (*  aaa
                bbbb *)
-          else if arcA_p2 < arcB_p2 then B_CONTAINS_A
+          else if arcA.fin.eval < arcB.fin.eval then B_CONTAINS_A
             (*  aaa
               bbbbbb *)
-          else if arcB_p2 > arcA_p1 && arcB_p2 < arcA_p2 then OVERLAP_LEFTA
+          else if arcB.fin.eval > arcA.start.eval && arcB.fin.eval < arcA.fin.eval then OVERLAP_LEFTA
             (*  aaa
                bbb *)
           else failwith "Unncaught case 2"
@@ -135,73 +138,73 @@ let do_problem a b c mode =
         if eq arcA.start arcB.start then EDGE_LEFTA_OVERLAP_RIGHTA
           (*bb|bb
             aa *)
-        else if arcA_p1 > arcB_p2 || eq arcA.start arcB.fin then (
+        else if arcA.start.eval > arcB.fin.eval || eq arcA.start arcB.fin then (
             (*bb|bb
              xxx   x..*)
-          if arcA_p2 < arcB_p1 || eq arcA.fin arcB.start then NO_OVERLAP
+          if arcA.fin.eval < arcB.start.eval || eq arcA.fin arcB.start then NO_OVERLAP
             (* bb|bb
               a     a.. *)
-          else if arcA_p2 > arcB_p1 && arcA_p1 < arcB_p1 then OVERLAP_RIGHTA
+          else if arcA.fin.eval > arcB.start.eval && arcA.start.eval < arcB.start.eval then OVERLAP_RIGHTA
             (* bb|bb
               aa     *)
-          else if arcA_p2 > arcB_p1 && arcA_p1 > arcB_p1 then B_CONTAINS_A
+          else if arcA.fin.eval > arcB.start.eval && arcA.start.eval > arcB.start.eval then B_CONTAINS_A
             (* bb|bb
                 a|   *)
           else failwith "Uncaught case 4"
-        ) else if arcA_p1 < arcB_p2 then (
+        ) else if arcA.start.eval < arcB.fin.eval then (
           (* bb|bb
             xx   a...*)
           if eq arcA.fin arcB.fin then OVERLAP_LEFTA_EDGE_RIGHTA
             (* bb|bb
                   aa *)
-          else if arcA_p2 < arcB_p2 then B_CONTAINS_A
+          else if arcA.fin.eval < arcB.fin.eval then B_CONTAINS_A
             (* bb|bb
                   a   *)
-          else if arcA_p2 < arcB_p1 || eq arcA.fin arcB.start then OVERLAP_LEFTA
+          else if arcA.fin.eval < arcB.start.eval || eq arcA.fin arcB.start then OVERLAP_LEFTA
             (* bb|bb
               a    aa*)
-          else if arcB_p1 < arcA_p2 then OVERLAP_BOTH
+          else if arcB.start.eval < arcA.fin.eval then OVERLAP_BOTH
             (* bb|bb
               aaa  aa... *)
           else failwith "Uncaught case 5"
         ) else failwith "Uncaught case 3"
       )
     ) else ( (* arcA overlaps 0 boundary*)
-      if arcB_p1 < arcB_p2 then ( (* arcB does not overlap 0 boundary *)
+      if arcB.start.eval < arcB.fin.eval then ( (* arcB does not overlap 0 boundary *)
         (* aa|aa
           xx   xx *)
-        if arcB_p1 < arcA_p2 then (
+        if arcB.start.eval < arcA.fin.eval then (
             (* aa|aa
               xx  bbx *)
           if eq arcB.fin arcA.fin then EDGE_RIGHTA
             (* aa|aa
                   bb *)
-          else if arcB_p2 < arcA_p2 then A_CONTAINS_B
+          else if arcB.fin.eval < arcA.fin.eval then A_CONTAINS_B
             (* aa|aa
                   b *)
-          else if arcB_p2 < arcA_p1 || eq arcB.fin arcA.start then OVERLAP_RIGHTA
+          else if arcB.fin.eval < arcA.start.eval || eq arcB.fin arcA.start then OVERLAP_RIGHTA
             (* aa|aa
               b   bbb..*)
-          else if arcB_p2 > arcA_p1 then OVERLAP_BOTH
+          else if arcB.fin.eval > arcA.start.eval then OVERLAP_BOTH
           else failwith "Uncaught case 8"
-        ) else if arcB_p1 > arcA_p2 || eq arcA.fin arcB.start then (
+        ) else if arcB.start.eval > arcA.fin.eval || eq arcA.fin arcB.start then (
           (* aa|aa
             xxx   x.. *)
           if eq arcB.start arcA.start then EDGE_LEFTA
             (* aa|aa
                b |  *)
-          else if arcB_p1 > arcA_p1 then A_CONTAINS_B 
+          else if arcB.start.eval > arcA.start.eval then A_CONTAINS_B 
             (* aa|aa
                 b|   *)
-          else if arcB_p2 < arcA_p1 || eq arcB.fin arcA.start then NO_OVERLAP
+          else if arcB.fin.eval < arcA.start.eval || eq arcB.fin arcA.start then NO_OVERLAP
             (* aa|aa
               b     b..*)
-          else if arcA_p1 < arcB_p2 then OVERLAP_LEFTA
+          else if arcA.start.eval < arcB.fin.eval then OVERLAP_LEFTA
           else failwith "Uncaught case 9"
         ) else if eq arcA.start arcB.start then EDGE_LEFTA
           (* aa|aa
             eb *)
-        else if arcB_p1 > arcA_p1 then A_CONTAINS_B
+        else if arcB.start.eval > arcA.start.eval then A_CONTAINS_B
         else failwith "Uncaught case 7"
       ) else ( (* both arcA & arcB overlap 0 boundary *)
         (* aaa|aaa
@@ -212,95 +215,61 @@ let do_problem a b c mode =
           if eq arcB.fin arcA.fin then EQUALS
             (* aaa|aaa
                bbb|bbb *)
-          else if arcB_p2 < arcA_p2 then EDGE_LEFTA
+          else if arcB.fin.eval < arcA.fin.eval then EDGE_LEFTA
             (* aaa|aaa
                bbb|b *)
-          else if arcB_p2 > arcA_p2 then EDGE_LEFTA_OVERLAP_RIGHTA
+          else if arcB.fin.eval > arcA.fin.eval then EDGE_LEFTA_OVERLAP_RIGHTA
             (* aaa|aaa
                bbb|bbbb *)
           else failwith "Uncaught case 11"
-        ) else if arcB_p1 > arcA_p1 then (
+        ) else if arcB.start.eval > arcA.start.eval then (
           (* aaa|aaa
             xx b|bbxxx.. *)
           if eq arcA.fin arcB.fin then EDGE_RIGHTA
             (* aaa|aaa
                  b|bbb *)
-          else if arcB_p2 < arcA_p2 then A_CONTAINS_B
+          else if arcB.fin.eval < arcA.fin.eval then A_CONTAINS_B
             (* aaa|aaa
                  b|b    *)
-          else if arcB_p2 > arcA_p2 && (arcB_p2 < arcA_p1 || (eq arcB.fin arcA.start)) then OVERLAP_RIGHTA
+          else if arcB.fin.eval > arcA.fin.eval && (arcB.fin.eval < arcA.start.eval || (eq arcB.fin arcA.start)) then OVERLAP_RIGHTA
             (* aaa|aaa
               b  b|bbbb.. *)
-          else if arcB_p2 > arcA_p2 && arcB_p2 > arcA_p1 then OVERLAP_BOTH
+          else if arcB.fin.eval > arcA.fin.eval && arcB.fin.eval > arcA.start.eval then OVERLAP_BOTH
             (* aaa|aaa
               bb b|bbbb.. *)
           else failwith "Uncaught case 12"
-        ) else if arcB_p1 < arcA_p1 && (arcB_p1 > arcA_p2 || eq arcB.start arcA.fin)  then (
+        ) else if arcB.start.eval < arcA.start.eval && (arcB.start.eval > arcA.fin.eval || eq arcB.start arcA.fin)  then (
           (* aaa|aaa
             bbbb|bbxxx *)
           if eq arcA.fin arcB.fin then OVERLAP_LEFTA_EDGE_RIGHTA
             (* aaa|aaa
               bbbb|bbb *)
-          else if arcB_p2 < arcA_p2 then OVERLAP_LEFTA
+          else if arcB.fin.eval < arcA.fin.eval then OVERLAP_LEFTA
             (* aaa|aaa
               bbbb|bb *)
-          else if arcB_p2 > arcA_p2 then B_CONTAINS_A
+          else if arcB.fin.eval > arcA.fin.eval then B_CONTAINS_A
             (* aaa|aaa
               bbbb|bbbb *)
           else failwith "Unncaught case 13"
-        ) else if arcB_p1 < arcA_p1 && (arcB_p1 < arcA_p2) then OVERLAP_BOTH
+        ) else if arcB.start.eval < arcA.start.eval && (arcB.start.eval < arcA.fin.eval) then OVERLAP_BOTH
          (* aaa  aaa|aaa...
              bbbbbbb|bbb... *) 
         else failwith "Uncaught case 10"
       )
-    )
-  in let print_comp_eval flip slice c =
-    Printf.printf "flip (%f, %f) overlaps slice (%f, %f) with %s\n" (eval_pos flip.start) (eval_pos flip.fin) (eval_pos slice.start) (eval_pos slice.fin) (string_from_overlap c)
-  in let areArcsAdjacent arcA arcB = arcA.up == arcB.up && (eq arcA.start arcB.fin || eq arcA.fin arcB.start)
-  in let mergeAdjacentArcs arcA arcB =
+    ) in
+  let print_comp_eval flip slice c =
+    Printf.printf "flip (%f, %f) overlaps slice (%f, %f) with %s\n" (flip.start.eval) (flip.fin.eval) (slice.start.eval) (slice.fin.eval) (string_from_overlap c) in
+
+  let areArcsAdjacent arcA arcB = arcA.up == arcB.up && (eq arcA.start arcB.fin || eq arcA.fin arcB.start) in
+
+  let mergeAdjacentArcs arcA arcB =
     if eq arcA.start arcB.fin then { arcB with fin = arcA.fin }
-    else { arcA with fin = arcB.fin }
+    else { arcA with fin = arcB.fin } in 
 
-  (* tie all the adecent slices together *)
-  in let rec normPoint pt =
-    if (fst pt) < 0 then normPoint (fst pt + total_degrees_i, snd pt) 
-    else (fst pt mod total_degrees_i, snd pt) in
-
-  (* simplify slices naively is O(n^2) so we write a O(NlgN) version below *)
-  (* let simplifyAllSlices allSlices =
-    let rec simplifySliceAgainst mSlice slicesToConsider unfitSlices success =
-      (* given a slice out, try to combine it with all the others. If it goes, then great: put it in
-    the "combined list". If it doesn't then put it in the "uncombined list" *)
-      match slicesToConsider with
-        | headSlice :: rst -> 
-            if areArcsAdjacent headSlice mSlice
-              then simplifySliceAgainst (mergeAdjacentArcs headSlice mSlice) rst unfitSlices true
-              else simplifySliceAgainst mSlice rst (headSlice :: unfitSlices) success
-        | [] -> (mSlice, unfitSlices, success) in
-    let rec normAllArcs arcs out = 
-      let normArc arc = { arc with start = normPoint arc.start; fin = normPoint arc.fin } 
-      in match arcs with
-      | a :: rcs -> normAllArcs  rcs ((normArc a) :: out)
-      | [] -> out
-    in let rec simplifySlicesHelp slices outputSlices =
-      match slices with
-        | hSlice :: rst ->
-            let (resSlice, unmatched, success) = simplifySliceAgainst hSlice rst [] false
-            in if success then simplifySlicesHelp (resSlice :: unmatched) outputSlices
-      else simplifySlicesHelp rst (resSlice :: outputSlices)
-        | [] -> outputSlices
-    in simplifySlicesHelp (normAllArcs allSlices []) [] 
-*)
-  (* O(nlg n) version *)
   let simplifyAllSlices allSlicesUnsorted =
-    let comp_slice a b = Float.compare (eval_pos a.start) (eval_pos b.start) in
+    let comp_slice a b = Float.compare (a.start.eval) (b.start.eval) in
     let allSlices = List.sort comp_slice allSlicesUnsorted in 
-    let rec normAllArcs arcs out = 
-      let normArc arc = { arc with start = normPoint arc.start; fin = normPoint arc.fin } 
-      in match arcs with
-      | a :: rcs -> normAllArcs  rcs ((normArc a) :: out)
-      | [] -> out
-    in let rec simplifySlicesHelp headSlice slices outputSlices =
+    let rec simplifySlicesHelp headSlice slices outputSlices =
       match slices with
         | hSlice :: rst ->
             if areArcsAdjacent headSlice hSlice
@@ -313,11 +282,11 @@ let do_problem a b c mode =
               then (mergeAdjacentArcs first headSlice) :: rst
               else headSlice :: outputSlices
             | [] -> [headSlice]
-    in match normAllArcs allSlices [] with
+    in match allSlices with
     | fst :: rst -> simplifySlicesHelp fst rst []
-    | [] -> failwith "Somehow had an empty list in simplifyAllSlices"
+    | [] -> failwith "Somehow had an empty list in simplifyAllSlices" in
     
-  in let flipSliceAlongArc flipArc sliceArc =
+  let flipSliceAlongArc flipArc sliceArc =
     let comparison = cake_compare sliceArc flipArc
     in let _ = if verbose then  print_comp_eval flipArc sliceArc comparison else () 
     in 
@@ -379,7 +348,7 @@ let do_problem a b c mode =
     | [] -> failwith "empty pie"
     | (_ :: (_ :: _)) -> NOT_DONE
     | (a :: []) -> if a.up then DONE else REVERSED (* eq a.start a.fin*)
-  in let randomArcP () = normPoint (Random.int total_degrees_i, Random.int total_degrees_i)
+  in let randomArcP () = create_arcPoint (Random.int total_degrees_i) (Random.int total_degrees_i)
 
   (* random tests *)
   in let rec test_random iters =
@@ -413,7 +382,7 @@ let do_problem a b c mode =
         let _ = if verbose then print_newline() else ()
         in test_random (iters - 1) 
       else
-        let _ = Printf.printf "Failed on trial %d: flip( %0.2f(%d %d) - %0.2f(%d %d) ), pie:...\n" iters (eval_pos flip.start) (fst flip.start) (snd flip.start) (eval_pos flip.fin) (fst flip.fin) (snd flip.fin)
+        let _ = Printf.printf "Failed on trial %d: flip( %0.2f(%d %d) - %0.2f(%d %d) ), pie:...\n" iters (flip.start.eval) (fst flip.start.tup) (snd flip.start.tup) (flip.fin.eval) (fst flip.fin.tup) (snd flip.fin.tup)
         and _ = print_arcs(pie)
         and _ = print_newline()
         and _ = print_arcs rawFlips
@@ -426,19 +395,20 @@ let do_problem a b c mode =
     | DONE -> steps
     | REVERSED -> let _ = print_string "." in steps * 2
     | NOT_DONE ->
-    if steps > 1000000 then
-      let _ = Printf.printf "Failing on a(%d) b(%d) c(%d)\n" a b c
+    if steps > 100000000 then
+      let _ = print_arcs slices
+      and _ = Printf.printf "Failing on a(%d) b(%d) c(%d) - %d slices\n" a b c (List.length slices)
        in failwith "something wrong"
     else
       let _ = if verbose then Printf.printf "Step %d has %d slices\n" steps (List.length slices) else ()
       in let cursor_slice =
         let front = cursor
-        and back = normPoint (arcPlus cursor f)
+        and back = arcPlus cursor f
         in { start = front; fin = back; up = false }
       in let next_slices = simplifyAllSlices(apply_flips cursor_slice  slices)
       in let _ = if verbose then print_arcs next_slices else ()
       in let _ = if verbose then print_newline() else ()
-      in problem_loop next_slices ff fff f (normPoint (arcPlus cursor f)) (steps + 1)
+      in problem_loop next_slices ff fff f (arcPlus cursor f) (steps + 1)
   in
   let rec is_square c i =
     if i > c then -1 
@@ -450,20 +420,37 @@ let do_problem a b c mode =
       in 3
     | DO_PROBLEM -> 
         let sqrt_int = is_square c 1
-        in if sqrt_int < 0 
-          then problem_loop [ {start = (0, 0); fin = (b * c, 0); up = false }; {start = (b * c, 0); fin = (0, 0); up = true }] (a * c, 0) (0, a * b) (b * c, 0) (b * c, 0) 1
-          else problem_loop [ {start = (0, 0); fin = (b * c, 0); up = false }; {start = (b * c, 0); fin = (0, 0); up = true }] (a * c, 0) (a * b * sqrt_int, 0) (b * c, 0) (b * c, 0) 1;;
+        and origin = create_arcPoint 0 0
+        and aDist = create_arcPoint (b * c) 0
+        and bDist = create_arcPoint (a * c) 0 in
+        let cDist = if sqrt_int < 0 then create_arcPoint 0 (a * b) else create_arcPoint (sqrt_int * a * b) 0 in
+        let starting_slices = [ {start = origin; fin = aDist; up = false}; {start = aDist; fin = origin; up = true}]
+        in problem_loop starting_slices bDist cDist aDist aDist 1 
 (* do a sanity check *)
-do_problem 3 4 5 TEST;;
-do_problem 3 4 5 DO_PROBLEM;;
 let do_many lim =
-  let rec loopy a b c =
-    if a == lim then Printf.printf "done\n"
-    else if b == lim then loopy (a + 1) (a + 2) (a + 3)
-    else if c == lim then loopy a (b+1) (b+2)
-    else let _ = Printf.printf "%d %d %d: %d\n" a b c (do_problem a b c DO_PROBLEM)
-      in loopy a b (c + 1) 
-  in loopy 3 4 5;;
-do_many 10;;
+  let rec loopy a b c sum =
+    if a < b && b < c && c <= lim then
+      let ans = do_problem a b c DO_PROBLEM in
+      let _ = Printf.printf "%d %d %d: %d\n%!" a b c ans
+      in loopy a b (c + 1) (sum + ans)
+    else if b < lim then loopy a (b + 1) (b + 2) sum
+    else if a < lim then loopy (a + 1) (a + 2) (a + 3) sum
+    else sum
+  in loopy 9 10 11 0;;
+
+
+let () = Printf.printf "G ="
+and loop_max = 17 (*read_int()*)
+in Printf.printf "Final sum: %d\n" (do_many loop_max);;
+
+Gc.print_stat stdout;;
 (*print_int (do_problem 5 6 8 DO_PROBLEM);;*)
+
+
+
+
+
+
+
+
 

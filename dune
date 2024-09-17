@@ -1,0 +1,22 @@
+(env
+ (dev
+  (flags
+   (:standard -w -37)
+   )
+  )
+ )
+
+(executable
+ (name cake))
+
+(executable
+ (name hash_test))
+
+(executable
+ (name search_test))
+
+(executable
+ (name search_ar))
+
+(executable
+ (name search_sort))
