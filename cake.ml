@@ -73,12 +73,12 @@ let do_problem a b c mode =
         let () = Printf.printf "%d: [ %0.2f(%d, %d), %0.2f(%d, %d) ] %s\n" (List.length rst) (a.start.eval) (fst a.start.tup) (snd a.start.tup) (a.fin.eval) (fst a.fin.tup) (snd a.fin.tup) (if a.up then "up" else "down")
         in print_arcs rst
     | [] -> ()
-  and verbose = false
+  and verbose = false in 
   (*in let comp_p a b =
     let apos = eval_pos a.start
     and bpos = eval_pos b.start
     in if apos > bpos then 1 else if apos == bpos then 0 else -1*)
-  in let cake_compare arcA arcB =
+  let cake_compare arcA arcB =
     let _ = if verbose then
       let _ = print_string "CALL TO COMPARE\n"
       and _ = print_arcs [arcA; arcB]
