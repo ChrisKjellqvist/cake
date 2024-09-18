@@ -46,16 +46,14 @@ type run_mode_t =
 
 let verbose = false;;
   
-let rec print_arcs lst = match lst with
-  | a :: rst -> 
-      let () = Printf.printf "%d: [ %0.2f(%d, %d), %0.2f(%d, %d) ] %s\n" (List.length rst) (a.start.eval) (fst a.start.tup) (snd a.start.tup) (a.fin.eval) (fst a.fin.tup) (snd a.fin.tup) (if a.up then "up" else "down")
-      in print_arcs rst
-  | [] -> ();;
-  
+let print_arcs lst =
+  let _ = Dynarray.mapi (fun idx a -> Printf.printf "%d: [ %0.2f(%d, %d), %0.2f(%d, %d) ] %s\n" (idx) (a.start.eval) (fst a.start.tup) (snd a.start.tup) (a.fin.eval) (fst a.fin.tup) (snd a.fin.tup) (if a.up then "up" else "down")) lst
+  in ()
+
 let cake_compare arcA arcB =
     let _ = if verbose then
       let _ = print_string "CALL TO COMPARE\n"
-      and _ = print_arcs [arcA; arcB]
+      and _ = print_arcs (Dynarray.of_list [arcA; arcB])
       in  print_string "END CALL\n" in
     if eq arcA.start arcA.fin then A_CONTAINS_B (* the entire circle is covered by A, so necessarily A contains B *)
     else if arcA.start.eval < arcA.fin.eval then (* no boundary-cross 0 *) (

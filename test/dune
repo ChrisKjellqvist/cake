@@ -2,3 +2,10 @@
 (name test_qsort)
 (libraries quicksort unix))
 
+(test
+(name test_qsort_dynarray)
+(libraries quicksort unix))
+
+(test
+(name test_qsort_record)
+(libraries quicksort unix))

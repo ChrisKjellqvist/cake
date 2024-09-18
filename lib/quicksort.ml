@@ -1,5 +1,6 @@
 
 let generic_qsort (getF: int -> 'a) (setF: int -> 'a -> unit) (compare: 'a -> 'a -> int) (beginIdx: int) (stopIdx: int) =
+
   let swap idxA idxB =
     if idxA = idxB then ()
     else 
@@ -20,12 +21,15 @@ let generic_qsort (getF: int -> 'a) (setF: int -> 'a -> unit) (compare: 'a -> 'a
   let partition loIdx hiIdx =
     let pivotIdx = (loIdx + hiIdx) lsr 1 in
     let pivotA = getF pivotIdx in
-    partition_loop pivotA loIdx hiIdx loIdx in
+    let _ = swap (hiIdx - 1) pivotIdx in 
+    let pivotLoc = partition_loop pivotA loIdx (hiIdx - 1) loIdx in
+    let _ = swap pivotLoc (hiIdx - 1) in
+    pivotLoc in
 
   let rec qsort start stop =
     if stop - start <= 1 then ()
     else
       let partition_point = partition start stop
-      in qsort start (partition_point - 1) ; qsort (partition_point + 1) stop
-  in qsort beginIdx stopIdx;;
+      in qsort start partition_point ; qsort (partition_point + 1) stop in
+  qsort beginIdx stopIdx;;
 
