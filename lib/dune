@@ -1,0 +1,7 @@
+(library
+ (name cake)
+ (modules Cake))
+
+(library
+ (name quicksort)
+ (modules Quicksort))
