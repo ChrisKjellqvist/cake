@@ -225,7 +225,7 @@ let do_many lim =
       in loopy 9 10 11 0;;
 
 let () = Printf.printf "G ="
-  and loop_max = 53 (*read_int()*)
+  and loop_max = 17 (*read_int()*)
   in Printf.printf "Final sum: %d\n" (do_many loop_max);;
 
 Gc.print_stat stdout;;

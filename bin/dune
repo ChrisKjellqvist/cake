@@ -5,4 +5,5 @@
 (executable
  (public_name cake_flip)
  (name cake)
+ (ocamlopt_flags -O3)
  (libraries cake quicksort))

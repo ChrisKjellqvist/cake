@@ -1,6 +1,8 @@
 (library
  (name cake)
- (modules Cake))
+ (modules Cake)
+ (ocamlopt_flags -O3)
+ )
 
 (library
  (name quicksort)

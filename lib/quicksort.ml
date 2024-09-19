@@ -1,7 +1,7 @@
 
 let generic_qsort (getF: int -> 'a) (setF: int -> 'a -> unit) (compare: 'a -> 'a -> int) (beginIdx: int) (stopIdx: int) =
 
-  let swap idxA idxB =
+  let [@inline] swap idxA idxB =
     if idxA = idxB then ()
     else 
       let a = getF idxA
